@@ -3,84 +3,11 @@ import torch
 from typing import Any, Optional
 
 import lightning.pytorch as pl
-from lightning.pytorch.utilities.types import STEP_OUTPUT, OptimizerLRScheduler, ReduceLROnPlateau
-from torchmetrics.classification import Accuracy
-from torchmetrics import MeanAbsoluteError
+from lightning.pytorch.utilities.types import STEP_OUTPUT
 
 import pandas as pd
-from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
-from scipy.stats import kendalltau, pearsonr
-
-class SocioeconomicClassificationInference(pl.LightningModule):
-    def __init__(self, model,  loss_fn=torch.nn.CrossEntropyLoss(), batch_size=32, initial_lr=8e-5) -> None:
-        super().__init__()
-        self.model = model
-        self.loss_fn = loss_fn
-        self.batch_size = batch_size
-        self.initial_lr = initial_lr
-        self.mae_metric = MeanAbsoluteError()
-        self.accuracy_metric = Accuracy(task="multiclass", num_classes=5)
-
-    def predict(self, data, mode="train"):
-        ids = data[0]
-        images = data[1]
-        labels = data[2]
-        if mode != "train":
-            labels = None
-
-        predictions = self.model(images, labels)
-
-        return predictions
-
-    def training_step(self, data, batch_idx) -> STEP_OUTPUT:
-        train_preds = self.predict(data)
-        labels = data[2]
-        loss = self.loss_fn(train_preds, labels)
-
-        self.log("train_loss", loss, batch_size=self.batch_size, on_epoch=True, on_step=False)
-
-        return loss
-
-    def validation_step(self, data, batch_idx) -> Optional[STEP_OUTPUT]:
-        val_preds = self.predict(data, mode="val")
-        scores, val_preds_classes = torch.max(val_preds, dim=1)
-        labels = data[2]
-        loss = self.loss_fn(val_preds, labels)
-        val_accuracy = self.accuracy_metric(val_preds_classes, labels)
-        val_mae = self.mae_metric(val_preds_classes, labels)
-
-        self.log("val_loss", loss, batch_size=self.batch_size, on_epoch=True, on_step=False)
-        self.log("val_accuracy", val_accuracy, batch_size=self.batch_size, on_epoch=True, on_step=False)
-        self.log("val_mae", val_mae, batch_size=self.batch_size, on_epoch=True, on_step=False)
-
-        return loss
-
-    def test_step(self, data, batch_idx) -> Optional[STEP_OUTPUT]:
-        test_preds = self.predict(data, mode="test")
-        scores, test_preds_classes = torch.max(test_preds, dim=1)
-        labels = data[2]
-        loss = self.loss_fn(test_preds, labels)
-        test_accuracy = self.accuracy_metric(test_preds_classes, labels)
-        test_mae = self.mae_metric(test_preds_classes, labels)
-
-        self.log("test_loss", loss, batch_size=self.batch_size, on_epoch=True, on_step=False)
-        self.log("test_accuracy", test_accuracy, batch_size=self.batch_size, on_epoch=True, on_step=False)
-        self.log("test_mae", test_mae, batch_size=self.batch_size, on_epoch=True, on_step=False)
-
-        return loss
-
-    def configure_optimizers(self):
-        adam_optimizer = torch.optim.Adam(self.model.parameters(), lr=self.initial_lr, weight_decay=0.0005)
-        #scheduler = ReduceLROnPlateau(adam_optimizer, mode="min", factor=0.25, patience=3, verbose=True, min_lr=1e-8)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(adam_optimizer, T_max=10, eta_min=1e-9)
-        return {
-            "optimizer": adam_optimizer,
-            "lr_scheduler": {
-                "scheduler": scheduler,
-                "monitor": "val_loss"
-            },
-        }
-
+from sklearn.metrics import r2_score, mean_squared_error
+from scipy.stats import kendalltau
 
 class SocioeconomicRegressionInference(pl.LightningModule):
     def __init__(self,
@@ -210,15 +137,11 @@ class SocioeconomicRegressionInference(pl.LightningModule):
 
 
     def configure_optimizers(self):
-        #adam_optimizer = torch.optim.Adam(self.model.parameters(), lr=self.initial_lr, weight_decay=self.weight_decay)
-        #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(adam_optimizer, T_max=self.trainer.max_epochs, eta_min=1e-8)
 
-        #Liveability params
         optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.initial_lr, weight_decay=self.weight_decay)
         if self.training_objective == "regression":
             scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.95, last_epoch=-1)
         else:
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=self.trainer.max_epochs)
-        #scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.25, patience=3, verbose=True, min_lr=1e-8)
 
         return [optimizer], [scheduler]

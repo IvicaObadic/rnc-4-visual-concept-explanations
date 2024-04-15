@@ -1,8 +1,8 @@
-/visualization_utils.py
+/visualization/visualization_utils.py
 /sorting_cavs.py
-/visualize_activations_side_by_side.py
-/visualize_tcav.py
-/visualize_tsne_prediction.py
+/visualization/cluster_instaces_with_concepts.py
+/visualization/visualize_tcav.py
+/visualization/visualize_embeddings.py
 /model_training.py
 /dynamic_earth_net/
 /household_income/data/
