@@ -199,7 +199,7 @@ def compute_cavs_and_activations(dataset_name, probing, timestamp, model_checkpo
 if __name__ == '__main__':
     dataset_name = "household_income"
     probing = False
-    #Household income checkpoint finetuned
+    #Household income checkpoint probed
     # timestamp = "2024-02-28_08.55.11"
     # model_checkpointpath = "epoch=97-val_R2_entire_set=0.62.ckpt"
 
@@ -207,7 +207,7 @@ if __name__ == '__main__':
     timestamp = "2024-02-26_17.51.13"
     model_checkpointpath = "epoch=93-val_R2_entire_set=0.53.ckpt"
 
-    #Liveability checkpoint finetuned
+    #Liveability checkpoint probed
     # timestamp = "2024-02-29_09.08.17"
     # model_checkpointpath = "epoch=45-val_R2_entire_set=0.68.ckpt"
 
