@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+#### Copied from https://github.com/kaiwenzha/Rank-N-Contrast/blob/main/loss.py ####
+
 class LabelDifference(nn.Module):
     def __init__(self, distance_type='l1'):
         super(LabelDifference, self).__init__()

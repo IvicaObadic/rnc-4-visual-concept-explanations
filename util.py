@@ -1,14 +1,11 @@
-import os
-
-import torch
 from torch.utils.data import DataLoader
-from liveability.dataloader import TCAV_dataset
-from liveability.pt_funcs import models as liveability_models
-from liveability.pt_funcs.dataloaders import LBMLoader
+from datasets.liveability.dataloader import TCAV_dataset
+from datasets.liveability.pt_funcs import models as liveability_models
+from datasets.liveability.pt_funcs.dataloaders import LBMLoader
 from models.socioeconomic_inference import *
-from models.income_prediction_model import *
+from models.socieconomic_outcome_model import *
 from models.loss_functions import *
-from household_income.householdincomedataset import HouseholdIncomeDataset
+from datasets.household_income.householdincomedataset import HouseholdIncomeDataset
 
 from utils.augmentation import *
 
@@ -17,15 +14,16 @@ from utils.augmentation import *
 #     "liveability": "/home/datasets/Liveability/"
 # }
 
+income_dataset_root_dir = "/home/ConceptDiscovery/SESEfficientCAM-master/"
+liveability_dataset_root_dir = "/home/datasets/liveability/"
+
 def create_data_loader(dataset, batch_size, split):
     return DataLoader(dataset=dataset, batch_size=batch_size, shuffle=split != "val", num_workers=8,
                       drop_last=True, pin_memory=True)
 
-def get_data_loaders(dataset_name, training_objective, batch_size):
+def get_data_loaders(dataset_name, dataset_root_dir, training_objective, batch_size):
     if dataset_name == "household_income":
-        root_dir = "/home/ConceptDiscovery/SESEfficientCAM-master/"
-        root_data_dir = os.path.join(root_dir, "data")
-        #labels_file = os.path.join(root_data_dir, "census_data", "squares_to_ses_2019.csv")
+        root_data_dir = os.path.join(dataset_root_dir, "data")
         images_root_dir = os.path.join(root_data_dir, "imagery_out")
         train_file = os.path.join(images_root_dir, "train.csv")
         val_file = os.path.join(images_root_dir, "val.csv")
@@ -40,8 +38,6 @@ def get_data_loaders(dataset_name, training_objective, batch_size):
                 create_data_loader(dataset_val, batch_size, "val"),
                 create_data_loader(dataset_test, batch_size, "val"))
     else:
-        dataset_root_dir = "/home/datasets/{}/".format(dataset_name)
-        print(dataset_root_dir)
         dataset_info_file = os.path.join(dataset_root_dir, "grid_geosplit_not_rescaled.geojson")
         lbm_data_module = LBMLoader(n_workers=8, batch_size=batch_size)
         lbm_data_module.setup_data_classes(dataset_info_file,
@@ -83,22 +79,6 @@ def get_trained_model(model_root_dir, model_checkpoint_path):
         model.cuda()
 
     return model.model
-
-
-def get_liveability_dataloader():
-    data_path = 'data/source/amsterdam_data_dict.pkl'
-    test_dataset = TCAV_dataset(data_path, transform=True)
-    test_dataloader = DataLoader(
-        test_dataset, batch_size=1, shuffle=False, num_workers=4)
-    return test_dataloader
-
-
-def get_household_income_data_loader():
-    data_path = "/home/ConceptDiscovery/SESEfficientCAM-master/data/imagery_out/test.csv"
-    test_dataset = HouseholdIncomeDataset(data_path, transform=test_transforms)
-    test_dataloader = DataLoader(
-        test_dataset, batch_size=1, shuffle=False, num_workers=4)
-    return test_dataloader
 
 
 

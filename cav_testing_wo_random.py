@@ -31,12 +31,10 @@ else:
     device = 'cpu'
     print('Device: cuda not available, using cpu')
 
-# Define Layers to evaluate
+# Define the hidden layers on which the TCAV algorithm is run
 layers = ["encoder.encoder.avgpool"]
 
 def compute_cavs_and_activations(dataset_name, probing, timestamp, model_checkpointpath):
-
-
     def save_instance_activations(data_loader, target_layer, layer_cavs, store_tsne=True):
         activations = []
         cosine_sim_cavs_instances = []
@@ -110,8 +108,6 @@ def compute_cavs_and_activations(dataset_name, probing, timestamp, model_checkpo
     model_dir = os.path.join(model_dir, timestamp)
 
     model = get_trained_model(model_dir, model_checkpointpath)
-    # for name, layer in model.named_modules():
-    #     print(name, layer)
 
     #setup the TCAV output directory
     out_folder = os.path.join(model_dir, "TCAV_output_wo_random/")

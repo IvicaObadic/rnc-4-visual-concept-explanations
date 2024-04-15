@@ -5,5 +5,7 @@
 /visualization/visualize_embeddings.py
 /model_training.py
 /dynamic_earth_net/
-/household_income/data/
-/liveability/epoch=14-val_lbm_mse=0.03.ckpt
+/datasets/household_income/data/
+/datasets/liveability/epoch=14-val_lbm_mse=0.03.ckpt
+/datasets/household_income/data/
+/cav_testing.py
