@@ -32,31 +32,82 @@ def get_normalized_cosine_sim_per_concept(outfolder, target_layer):
 
     return predictions_cosine_sim
 
+
+def cluster_concepts_for_contrastive_encoder(income_conpcet_similarities, liveability_concept_similarities):
+    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(6, 2.5))
+    fig.subplots_adjust(right=0.8)  # Adjust right side for legend space
+
+    ax_hi_contrastive = sns.scatterplot(x='tsne_dim_1', y='tsne_dim_2', hue='concept', palette=CONCEPT_COLOR_MAPPING,
+                                        data=income_conpcet_similarities, ax=axs[0], s=5, edgecolor=None)
+    ax_hi_contrastive.xaxis.set_major_locator(ticker.NullLocator())
+    ax_hi_contrastive.yaxis.set_major_locator(ticker.NullLocator())
+    ax_hi_contrastive.set(xlabel=None, ylabel=None)
+    ax_hi_contrastive.set_title("Income")
+    ax_hi_contrastive.set_ylabel("Concept clusters")
+
+    ax_liveability_contrastive = sns.scatterplot(x='tsne_dim_1', y='tsne_dim_2', hue='concept',
+                                                 palette=CONCEPT_COLOR_MAPPING,
+                                                 data=liveability_concept_similarities, ax=axs[1], s=5,
+                                                 edgecolor=None)
+    ax_liveability_contrastive.xaxis.set_major_locator(ticker.NullLocator())
+    ax_liveability_contrastive.yaxis.set_major_locator(ticker.NullLocator())
+    ax_liveability_contrastive.set(xlabel=None, ylabel=None)
+    ax_liveability_contrastive.set_title("Liveability")
+
+    lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
+    # remove the legends from the individual axis
+    for ax in fig.axes:
+        ax.get_legend().remove()
+
+    # Combine lines and labels from all subplots, removing duplicates
+    lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
+    unique_labels, lines_for_plot = [], []
+    for line, label in zip(lines, labels):
+        if label not in unique_labels:
+            unique_labels.append(label)
+            lines_for_plot.append(
+                Rectangle((0, 0), 0.5, 0.5, color=line.get_color(), label=label))  # Create square legend symbols
+
+    sorted_legend_items = ["water", "vegetation", "agriculture", "sparse res.", "medium res.", "dense res.",
+                           "impervious"]
+    sorted_lines_for_plot = [lines_for_plot[unique_labels.index(label)] for label in sorted_legend_items if label in unique_labels]
+
+    # Create the legend entirely outside the plot with one column
+    legend = fig.legend(sorted_lines_for_plot, sorted_legend_items, loc='upper left', title="Concept",
+                        bbox_to_anchor=(0.98, 0.88))  # Adjust location as needed
+
+    # Adjust layout (optional)
+    fig.tight_layout()
+    plt.savefig(os.path.join(out_folder_income_contrastive, "", "contrastive_instance_cluster_allignment.png"), bbox_inches='tight',
+                dpi=300)
+
 if __name__ == '__main__':
 
 
     out_folder_income_baseline, model_type = get_out_folder("household_income", False)
-    out_folder_income_finetuned, model_type = get_out_folder("household_income", True)
+    out_folder_income_contrastive, model_type = get_out_folder("household_income", True)
 
     out_folder_liveability_baseline, model_type = get_out_folder("Liveability", False)
-    out_folder_liveability_finetuned, model_type = get_out_folder("Liveability", True)
+    out_folder_liveability_contrastive, model_type = get_out_folder("Liveability", True)
 
-    hi_finetuned_results = get_normalized_cosine_sim_per_concept(out_folder_income_finetuned, layer)
+    hi_contrastive_results = get_normalized_cosine_sim_per_concept(out_folder_income_contrastive, layer)
     hi_baseline_results = get_normalized_cosine_sim_per_concept(out_folder_income_baseline, layer)
 
-    liveability_finetuned_results = get_normalized_cosine_sim_per_concept(out_folder_liveability_finetuned, layer)
+    liveability_contrastive_results = get_normalized_cosine_sim_per_concept(out_folder_liveability_contrastive, layer)
     liveability_baseline_results = get_normalized_cosine_sim_per_concept(out_folder_liveability_baseline, layer)
+
+    cluster_concepts_for_contrastive_encoder(hi_contrastive_results, liveability_contrastive_results)
 
     fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(6, 3.5))
     fig.subplots_adjust(right=0.8)  # Adjust right side for legend space
 
-    ax_hi_finetuned = sns.scatterplot(x='tsne_dim_1', y='tsne_dim_2', hue='concept', palette=CONCEPT_COLOR_MAPPING,
-                                      data=hi_finetuned_results, ax=axs[0][0], s=5, edgecolor=None)
-    ax_hi_finetuned.xaxis.set_major_locator(ticker.NullLocator())
-    ax_hi_finetuned.yaxis.set_major_locator(ticker.NullLocator())
-    ax_hi_finetuned.set(xlabel=None, ylabel=None)
-    ax_hi_finetuned.set_title("Rank-N-Contrast loss")
-    ax_hi_finetuned.set_ylabel("Income")
+    ax_hi_contrastive = sns.scatterplot(x='tsne_dim_1', y='tsne_dim_2', hue='concept', palette=CONCEPT_COLOR_MAPPING,
+                                        data=hi_contrastive_results, ax=axs[0][0], s=5, edgecolor=None)
+    ax_hi_contrastive.xaxis.set_major_locator(ticker.NullLocator())
+    ax_hi_contrastive.yaxis.set_major_locator(ticker.NullLocator())
+    ax_hi_contrastive.set(xlabel=None, ylabel=None)
+    ax_hi_contrastive.set_title("Rank-N-Contrast loss")
+    ax_hi_contrastive.set_ylabel("Income")
 
     ax_hi_baseline = sns.scatterplot(x='tsne_dim_1', y='tsne_dim_2', hue='concept', palette=CONCEPT_COLOR_MAPPING,
                                      data=hi_baseline_results, ax=axs[0][1], s=5, edgecolor=None)
@@ -65,13 +116,13 @@ if __name__ == '__main__':
     ax_hi_baseline.set(xlabel=None, ylabel=None)
     ax_hi_baseline.set_title("$L_1$ loss")
 
-    ax_liveability_finetuned = sns.scatterplot(x='tsne_dim_1', y='tsne_dim_2', hue='concept',
-                                               palette=CONCEPT_COLOR_MAPPING,
-                                               data=liveability_finetuned_results, ax=axs[1][0], s=5, edgecolor=None)
-    ax_liveability_finetuned.xaxis.set_major_locator(ticker.NullLocator())
-    ax_liveability_finetuned.yaxis.set_major_locator(ticker.NullLocator())
-    ax_liveability_finetuned.set(xlabel=None, ylabel=None)
-    ax_liveability_finetuned.set_ylabel("Liveability")
+    ax_liveability_contrastive = sns.scatterplot(x='tsne_dim_1', y='tsne_dim_2', hue='concept',
+                                                 palette=CONCEPT_COLOR_MAPPING,
+                                                 data=liveability_contrastive_results, ax=axs[1][0], s=5, edgecolor=None)
+    ax_liveability_contrastive.xaxis.set_major_locator(ticker.NullLocator())
+    ax_liveability_contrastive.yaxis.set_major_locator(ticker.NullLocator())
+    ax_liveability_contrastive.set(xlabel=None, ylabel=None)
+    ax_liveability_contrastive.set_ylabel("Liveability")
 
     ax_liveability_baseline = sns.scatterplot(x='tsne_dim_1', y='tsne_dim_2', hue='concept',
                                               palette=CONCEPT_COLOR_MAPPING,
@@ -103,6 +154,6 @@ if __name__ == '__main__':
 
     # Adjust layout (optional)
     fig.tight_layout()
-    plt.savefig(os.path.join(out_folder_income_finetuned, "", "instance_cluster_allignment.png"), bbox_inches='tight',
+    plt.savefig(os.path.join(out_folder_income_contrastive, "", "instance_cluster_allignment.png"), bbox_inches='tight',
                 dpi=300)
 
