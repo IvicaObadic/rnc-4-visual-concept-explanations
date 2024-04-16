@@ -13,7 +13,7 @@ To download these datasets, please follow the instructions provided in the corre
 The concept dataset was extracted from the Flair dataset (https://ignf.github.io/FLAIR/) by subseting image patches having certain proportion of land cover classes (see the manuscript Section 4.2) 
 
 Once the datasets are downloaded, the following steps need to be implemented:
-1. **Rank-N-Contrast** pretraining. We used the implementation for the Rank:
+1. **Rank-N-Contrast** pretraining. We used the loss function from the Rank-N-Contrast github repo (https://github.com/kaiwenzha/Rank-N-Contrast):
 `python train_socioeconomic_model `<br>` --dataset_name <'household_income' or 'Liveability'> `<br>` --dataset_root_dir <the root directory where the dataset is located> `<br>` --training_objective 'contrastive' `<br>` --model_output_root_dir <the root dir where the model output should be stored>`
 2. Linear probing: `python train_socioeconomic_model `<br>` --dataset_name <'household_income' or 'Liveability'> `<br>` --dataset_root_dir <the root directory where the dataset is located> `<br>` --training_objective 'regression' `<br>` --model_output_root_dir <the root dir where the model output should be stored> `<br>` --encoder_weights_path <the path to the checkpoint of the model pretrained with the Rank-N-Contrast>`
 3. TCAV analysis: `python cav_testing_wo_random`
