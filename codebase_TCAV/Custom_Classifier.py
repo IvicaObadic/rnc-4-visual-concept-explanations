@@ -360,9 +360,6 @@ class StratifiedClassifier(Classifier):
         all_examples = np.array(all_examples)
         all_labels = np.array(all_labels)
 
-        print(all_examples.shape)
-        print(all_labels.shape)
-
         train_idx, test_idx = train_test_split(
             list(range(all_examples.shape[0])), test_size=test_split_ratio, shuffle=True, stratify=all_labels)
 

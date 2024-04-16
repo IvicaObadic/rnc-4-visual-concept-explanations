@@ -45,7 +45,7 @@ def socieconomic_model_training(dataset_name,
                        encoder_weights_path=encoder_weights_path)
     model_output_dir = os.path.join(model_output_root_dir, dataset_name, "models", training_objective, model.model_name())
     if encoder_weights_path is not None:
-        model_output_dir = os.path.join(model_output_dir, "probing")
+        model_output_dir = os.path.join(model_output_dir, "probed")
 
     run_time = datetime.datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     model_output_dir = os.path.join(model_output_dir, run_time)

@@ -1,6 +1,7 @@
 import os
 import pickle
 import shutil
+import argparse
 
 import numpy as np
 import pandas as pd
@@ -12,9 +13,8 @@ from captum.concept import TCAV
 
 from util import *
 from codebase_TCAV.utils_CAVs import assemble_concept, assemble_random_concept
-from codebase_TCAV.Custom_Classifier import EfficientClassifier, StratifiedClassifier
+from codebase_TCAV.Custom_Classifier import StratifiedClassifier
 from sklearn.manifold import TSNE
-from scipy.spatial.distance import cdist
 
 
 import datetime
@@ -34,7 +34,21 @@ else:
 # Define the hidden layers on which the TCAV algorithm is run
 layers = ["encoder.encoder.avgpool"]
 
-def compute_cavs_and_activations(dataset_name, probing, timestamp, model_checkpointpath):
+def parse_args():
+  parser = argparse.ArgumentParser(description="Parses the parameters for the contrastive pretraining and probing of the deep learning models that predict socieconomic outcomes.")
+
+  parser.add_argument("--dataset_name", type=str, default="household_income", help="Name of the dataset to use for training. Supported names are 'household_income' and 'Liveability'.")
+  parser.add_argument("--dataset_root_dir", type=str, default=income_dataset_root_dir, help="Root directory containing the dataset.")
+  parser.add_argument("--model_output_root_dir", type=str, default="/home/results/ConceptDiscovery/", help="The root dir where the model checkpoints are stored.'")
+  parser.add_argument("--probing", type=bool, help="Whether the testing is done on the probed model or on the standard supervised model.")
+  parser.add_argument("--timestamp", type=str, help="The timestamp of the model on which the concepts are to be tested.")
+  parser.add_argument("--encoder_weights_path", type=str, default=None, help="The name of the model checkpoint.")
+  parser.add_argument("--concepts_path", type=str, default="/home/ConceptDiscovery/concepts/TCAV_data/", help="The root folder where the concept examples are located.")
+
+  return parser.parse_args()
+
+
+def compute_cavs_and_activations(dataset_name, dataset_root_dir, model_output_root_dir, probing, timestamp, model_checkpointpath, concepts_path):
     def save_instance_activations(data_loader, target_layer, layer_cavs, store_tsne=True):
         activations = []
         cosine_sim_cavs_instances = []
@@ -101,10 +115,10 @@ def compute_cavs_and_activations(dataset_name, probing, timestamp, model_checkpo
 
 
     objective = "regression"
-    model_dir = os.path.join('/home/results/ConceptDiscovery/{}'.format(dataset_name), "models", objective,
+    model_dir = os.path.join(model_output_root_dir, format(dataset_name), "models", objective,
                              "encoder_resnet50")
     if probing:
-        model_dir = os.path.join(model_dir, "fine-tuned")
+        model_dir = os.path.join(model_dir, "probed")
     model_dir = os.path.join(model_dir, timestamp)
 
     model = get_trained_model(model_dir, model_checkpointpath)
@@ -114,14 +128,13 @@ def compute_cavs_and_activations(dataset_name, probing, timestamp, model_checkpo
     os.makedirs(out_folder, exist_ok=True)
 
     # Setting up Concepts
-    concept_path = "/home/ConceptDiscovery/concepts/TCAV_data/"
     concepts_bank = ['impervious_surface', 'vegetation_wo10', 'city_dense', 'city_medium', 'city_sparse', 'agriculture', 'original_water']
 
     experiment_setup = []
     for concept_idx, concept in enumerate(concepts_bank):
         all_other_concepts = [other_concept for other_concept in concepts_bank if other_concept != concept]
-        concept_dataset = assemble_concept(concept, concept_idx, concept_path, device)
-        random_dataset = assemble_random_concept(all_other_concepts, concept_idx + len(concepts_bank), concept_path, device)
+        concept_dataset = assemble_concept(concept, concept_idx, concepts_path, device)
+        random_dataset = assemble_random_concept(all_other_concepts, concept_idx + len(concepts_bank), concepts_path, device)
         experiment_setup.append([concept_dataset, random_dataset])
 
     # Define Setup
@@ -139,7 +152,6 @@ def compute_cavs_and_activations(dataset_name, probing, timestamp, model_checkpo
                       multiply_by_inputs=True),
                   classifier=StratifiedClassifier(epochs=1, device=device, batch_size=400))
 
-    # TCAV_0 = TCAV(model=model.model.model,layers=layers,classifier=EfficientClassifier(epochs=1, device=device))
     print("Saving CAVs")
     # compute Classifier and save for accuracies and CAV weights
     cavs_computed = TCAV_0.compute_cavs(experiment_setup, force_train=True)
@@ -164,7 +176,8 @@ def compute_cavs_and_activations(dataset_name, probing, timestamp, model_checkpo
     cav_accuracy_per_layer = pd.DataFrame(cav_accuracy_per_layer, columns=["layer", "concept", "accuracy", "f1_score"])
     cav_accuracy_per_layer.to_csv(os.path.join(out_folder, "cav_accuracy.csv"))
 
-    train_data_loader, val_data_loader, test_dataloader = get_data_loaders(dataset_name, objective, batch_size=1)
+    #compute and store the instance activations and their cosinse similarity with the trained CAVs
+    train_data_loader, val_data_loader, test_dataloader = get_data_loaders(dataset_name, dataset_root_dir, objective, batch_size=1)
     for target_layer in layers:
         save_instance_activations(test_dataloader, target_layer, cav_weights_per_layer[target_layer])
 
@@ -197,21 +210,11 @@ def compute_cavs_and_activations(dataset_name, probing, timestamp, model_checkpo
 
 
 if __name__ == '__main__':
-    dataset_name = "household_income"
-    probing = False
-    #Household income checkpoint probed
-    # timestamp = "2024-02-28_08.55.11"
-    # model_checkpointpath = "epoch=97-val_R2_entire_set=0.62.ckpt"
-
-    #Household income checkpoint baseline
-    timestamp = "2024-02-26_17.51.13"
-    model_checkpointpath = "epoch=93-val_R2_entire_set=0.53.ckpt"
-
-    #Liveability checkpoint probed
-    # timestamp = "2024-02-29_09.08.17"
-    # model_checkpointpath = "epoch=45-val_R2_entire_set=0.68.ckpt"
-
-    # Liveability checkpoint baseline
-    # timestamp = "2024-02-24_19.13.35"
-    # model_checkpointpath = "epoch=29-val_R2_entire_set=0.70.ckpt"
-    compute_cavs_and_activations(dataset_name, probing, timestamp, model_checkpointpath)
+    args = parse_args()
+    compute_cavs_and_activations(args.dataset_name,
+                                 args.dataset_root_dir,
+                                 args.model_output_root_dir,
+                                 args.probing,
+                                 args.timestamp,
+                                 args.encoder_weights_path,
+                                 args.concepts_path)
