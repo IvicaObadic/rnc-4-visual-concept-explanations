@@ -16,9 +16,10 @@ The concept dataset was extracted from the Flair dataset (https://ignf.github.io
 Once the datasets are downloaded, the following steps need to be implemented:
 1. **Rank-N-Contrast** pretraining. We used the loss function from the Rank-N-Contrast Github repo (https://github.com/kaiwenzha/Rank-N-Contrast):
 `python train_socioeconomic_model.py` 
-2. Linear probing: `python train_socioeconomic_model.py --encoder_checkpoint_path <the relative path under the model directory of the checkpoint of the model pretrained with the Rank-N-Contrast>`
-3. Concepts testing (computes the t-SNE activations and TCAV): `python concepts_testing.py`
+2. **Linear probing**: `python train_socioeconomic_model.py `<br>` --training_objective "regression" `<br>` --encoder_checkpoint_path <the relative path under the model directory of the contrastive pretrained checkpoint>`
+3. **Concepts testing** (computes the t-SNE activations and TCAV): `python concepts_testing.py`
 
 The description of the arguments that these scripts accept can be found in the python files. The default hyperparameters for the model training can be found in the /setup/training_params.yaml file and the scripts for visualization of the results can be found in the **visualization** directory.
+The model checkpoints are available under the **model_checkpoints** directory.
 
 
