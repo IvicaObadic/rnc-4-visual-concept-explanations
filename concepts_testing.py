@@ -85,7 +85,7 @@ def compute_cavs_and_activations(dataset_name, dataset_root_dir, model_output_ro
             image = batch[1].to(device)
             label = batch[2]
 
-            output = model(image, label)
+            output = model(image)
             test_ids.append(image_id)
             label = label.squeeze().cpu().detach().numpy()
             prediction = output.squeeze().cpu().detach().numpy()

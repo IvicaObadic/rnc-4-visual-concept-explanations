@@ -35,10 +35,10 @@ def get_out_folder(dataset_name, probing):
     if dataset_name == "household_income":
         if probing:
             model_type = "contrastive pretrained model"
-            timestamp = "2024-02-28_08.55.11"
+            timestamp = "2024-04-18_08.33.23"
         else:
             model_type = "regression model"
-            timestamp = "2024-02-26_17.51.13"
+            timestamp = "2024-04-16_14.27.25"
     else:
         if probing:
             model_type = "contrastive pretrained model"
@@ -50,9 +50,9 @@ def get_out_folder(dataset_name, probing):
     tcav_results_folder = os.path.join('/home/results/ConceptDiscovery/{}'.format(dataset_name), "models", objective,
                                        "encoder_resnet50")
     if probing:
-        tcav_results_folder = os.path.join(tcav_results_folder, "fine-tuned")
+        tcav_results_folder = os.path.join(tcav_results_folder, "probed")
 
-    tcav_results_folder = os.path.join(tcav_results_folder, timestamp, "TCAV_output_wo_random/")
+    tcav_results_folder = os.path.join(tcav_results_folder, timestamp, "TCAV_output")
     return tcav_results_folder, model_type
 
 def get_tcav_scores_with_tsne_activations(results_folder):
@@ -74,18 +74,18 @@ def normalize_TCAV_value(concept_data):
 
 def visualize_tcav_scores_with_tsne_activations():
 
-    tcav_scores_income_finetuned = get_tcav_scores_with_tsne_activations(out_folder_income_finetuned)
-    tcav_scores_liveability_finetuned = get_tcav_scores_with_tsne_activations(out_folder_liveability_finetuned)
+    tcav_scores_income_probed = get_tcav_scores_with_tsne_activations(out_folder_income_probed)
+    tcav_scores_liveability_probed = get_tcav_scores_with_tsne_activations(out_folder_liveability_probed)
 
-    visualization_out_dir = os.path.join(out_folder_income_finetuned, "visualization")
+    visualization_out_dir = os.path.join(out_folder_income_probed, "visualization")
     os.makedirs(visualization_out_dir, exist_ok=True)
 
-    for concept in tcav_scores_liveability_finetuned["concept"].unique():
+    for concept in tcav_scores_liveability_probed["concept"].unique():
 
-        liveability_concept_data = tcav_scores_liveability_finetuned.loc[tcav_scores_liveability_finetuned["concept"] == concept]
+        liveability_concept_data = tcav_scores_liveability_probed.loc[tcav_scores_liveability_probed["concept"] == concept]
         liveability_concept_data = normalize_TCAV_value(liveability_concept_data)
 
-        income_concept_data = tcav_scores_income_finetuned.loc[tcav_scores_income_finetuned["concept"] == concept]
+        income_concept_data = tcav_scores_income_probed.loc[tcav_scores_income_probed["concept"] == concept]
         income_concept_data = normalize_TCAV_value(income_concept_data)
 
         fig, axs = plt.subplots(nrows=1, ncols=2,figsize=(6, 2.0))
@@ -140,16 +140,16 @@ def get_cavs_activations(out_folder, layer, encoder="L1 loss"):
     return cav_layer_accuracy
 
 def get_concept_layer_accuracy(baseline_model_folder, finetuned_model_folder):
-    visualization_out_dir_finetuned = os.path.join(finetuned_model_folder, "")
-    os.makedirs(visualization_out_dir_finetuned, exist_ok=True)
+    visualization_out_dir_probed = os.path.join(finetuned_model_folder, "")
+    os.makedirs(visualization_out_dir_probed, exist_ok=True)
 
     concept_layer_accuracies_baseline = pd.read_csv(os.path.join(baseline_model_folder, "cav_accuracy.csv"))
     concept_layer_accuracies_baseline["objective"] = "L1 loss"
 
-    concept_layer_accuracies_finetuned = pd.read_csv(os.path.join(finetuned_model_folder, "cav_accuracy.csv"))
-    concept_layer_accuracies_finetuned["objective"] = "Rank-N-Contrast"
+    concept_layer_accuracies_probed = pd.read_csv(os.path.join(finetuned_model_folder, "cav_accuracy.csv"))
+    concept_layer_accuracies_probed["objective"] = "Rank-N-Contrast"
 
-    concept_accuracy = pd.concat([concept_layer_accuracies_baseline, concept_layer_accuracies_finetuned], axis=0)
+    concept_accuracy = pd.concat([concept_layer_accuracies_baseline, concept_layer_accuracies_probed], axis=0)
     concept_accuracy["concept"] = concept_accuracy["concept"].apply(lambda x: x.split("-")[0])
     concept_accuracy["concept"].replace(concept_name_mapping, inplace=True)
 
@@ -160,7 +160,7 @@ def get_concept_layer_accuracy(baseline_model_folder, finetuned_model_folder):
     axs.set_xticklabels(axs.get_xticklabels(), rotation=45, ha='right')
     axs.set_ylabel("SVM concept accuracy")
     fig.tight_layout()
-    plt.savefig(os.path.join(visualization_out_dir_finetuned, "{}_concept_layer_accuracy.pdf".format(dataset_name)),
+    plt.savefig(os.path.join(visualization_out_dir_probed, "{}_concept_layer_accuracy.pdf".format(dataset_name)),
                 dpi=300)
     plt.close()
 
@@ -169,9 +169,9 @@ if __name__ == '__main__':
 
     dataset_name = "household_income"
     dataset_title = "Liveability" if dataset_name == "Liveability" else "Income"
-    out_folder_income_finetuned, _ = get_out_folder("household_income", True)
+    out_folder_income_probed, _ = get_out_folder("household_income", True)
 
-    out_folder_liveability_finetuned, _ = get_out_folder("Liveability", True)
+    out_folder_liveability_probed, _ = get_out_folder("Liveability", True)
 
     for layer in layers:
         visualize_tcav_scores_with_tsne_activations()

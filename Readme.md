@@ -1,7 +1,7 @@
 # __Contrastive Pretraining for Visual Concept Explanations of Socieeconomic Outcomes__
 
 >This is the code the for __Contrastive Pretraining for Visual Concept Explanations of Socieeconomic Outcomes__ paper that is accepted for publication at the EarthVision workshop in CVPR24.
-The proposed pipeline enables intuitive visual explanations of the deep learning models for predicting socioeconomic outcomes in terms of urban concepts. It consists of 3 steps: Firstly, we train the feature encoder using Rank-N-Contrast (RNC) loss, which optimizes the feature extractor to produce embeddings that are continuously ordered according to the target outcome. Next, we probe a linear layer on the frozen embedding space to regress an output score. Lastly, we analyze the learned embedding through Testing using Concept Activation Vectors (TCAV), a post-hoc concept-based interpretability method.
+The proposed pipeline enables intuitive visual explanations of the deep learning models for predicting socioeconomic outcomes in terms of urban concepts. It consists of 3 steps: Firstly, we train the feature encoder using Rank-N-Contrast (RNC) loss, which optimizes the feature extractor to produce embeddings that are continuously ordered according to the target outcome. Next, we probe a linear layer on the frozen embedding space to regress an output score. Lastly, we analyze the learned embedding through Testing using Concept Activation Vectors (TCAV), a post-hoc concept-based interpretability method. The paper can be accessed on the following link: https://arxiv.org/abs/2404.09768
 
 ![Proposed workflow](method_workflow.png)
 
