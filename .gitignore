@@ -6,7 +6,5 @@
 /model_training.py
 /dynamic_earth_net/
 /datasets/household_income/data/
-/datasets/liveability/epoch=14-val_lbm_mse=0.03.ckpt
-/datasets/household_income/data/
 /concepts_testing.py
 /.idea
