@@ -38,10 +38,10 @@ class Encoder(torch.nn.Module):
         return model_name
 
 
-class SocioeconomicInferencePredictor(torch.nn.Module):
+class SocioeconomicOutcomePredictor(torch.nn.Module):
 
     def __init__(self, encoder, num_classes=1):
-        super(SocioeconomicInferencePredictor, self).__init__()
+        super(SocioeconomicOutcomePredictor, self).__init__()
         self.encoder = encoder
         encoder_output_dim = 1280 if self.encoder.encoder_name == "efficientNet" else 2048
         self.prediction_layer = nn.Linear(in_features=encoder_output_dim, out_features=num_classes)
@@ -59,6 +59,7 @@ class SocioeconomicInferencePredictor(torch.nn.Module):
 def init_model(objective="contrastive", encoder_name="efficientNet", pretrained=False, encoder_weights_path=None, num_classes=1):
     encoder = Encoder(pretrained=pretrained, encoder_name=encoder_name)
     if encoder_weights_path is not None:
+        print("Loading model checkpoint from {}".format(encoder_weights_path), flush=True)
         encoder_state_dict = torch.load(encoder_weights_path)["state_dict"]
         new_state_dict = {}
         for k, v in encoder_state_dict.items():
@@ -66,13 +67,13 @@ def init_model(objective="contrastive", encoder_name="efficientNet", pretrained=
             new_state_dict[k] = v
         encoder_state_dict = new_state_dict
         encoder.load_state_dict(encoder_state_dict)
-        print("Probing mode, disabling gradients for the pretrained model")
+        print("Probing mode, disabling gradients for the pretrained model", flush=True)
         for param in encoder.parameters():
             param.requires_grad = False
 
     if objective == "contrastive":
         return encoder
     else:
-        prediction_model = SocioeconomicInferencePredictor(encoder, num_classes=num_classes)
+        prediction_model = SocioeconomicOutcomePredictor(encoder, num_classes=num_classes)
         return prediction_model
 

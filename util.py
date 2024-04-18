@@ -9,11 +9,6 @@ from datasets.household_income.householdincomedataset import HouseholdIncomeData
 
 from utils.augmentation import *
 
-# dataset_name_root_dir = {
-#     'income': "/home/ConceptDiscovery/SESEfficientCAM-master/",
-#     "liveability": "/home/datasets/Liveability/"
-# }
-
 income_dataset_root_dir = "/home/ConceptDiscovery/SESEfficientCAM-master/"
 liveability_dataset_root_dir = "/home/datasets/liveability/"
 
@@ -29,8 +24,7 @@ def get_data_loaders(dataset_name, dataset_root_dir, training_objective, batch_s
         val_file = os.path.join(images_root_dir, "val.csv")
         test_file = os.path.join(images_root_dir, "test.csv")
 
-        dataset_train = HouseholdIncomeDataset(train_file,
-                                               transform=get_transforms(training_objective, train_transforms))
+        dataset_train = HouseholdIncomeDataset(train_file, transform=get_transforms(training_objective, train_transforms))
         dataset_val = HouseholdIncomeDataset(val_file, transform=get_transforms(training_objective, test_transforms))
         dataset_test = HouseholdIncomeDataset(test_file, transform=get_transforms(training_objective, test_transforms))
 
@@ -48,24 +42,6 @@ def get_data_loaders(dataset_name, dataset_root_dir, training_objective, batch_s
                                            test_transforms=get_transforms(training_objective, test_transforms))
 
         return lbm_data_module.train_dataloader(), lbm_data_module.val_dataloader(), lbm_data_module.test_dataloader()
-
-def get_liveability_model():
-    # Set up model
-    label_info = {}
-    label_info['dim_scores'] = {}
-    label_info['lbm_score'] = {}
-    label_info['lbm_score']['ylims'] = [-1.5, 1.5]
-    checkpoint_path = 'codebase_TCAV/epoch=14-val_lbm_mse=0.03.ckpt'
-    model = liveability_models.LBMBaselineModel('outputs_tcav/',
-                             'baseline', label_info, splits=['val', 'test', 'train'])
-    state_dict = torch.load(checkpoint_path, map_location=torch.device('cpu'))[
-        'state_dict']
-    model.load_state_dict(state_dict)
-    model.eval()
-    if torch.cuda.is_available():
-        model.model.model.cuda()
-
-    return model.model.model
 
 def get_trained_model(model_root_dir, model_checkpoint_path):
     objective = "regression"

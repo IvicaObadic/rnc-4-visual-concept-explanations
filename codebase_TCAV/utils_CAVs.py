@@ -1,16 +1,10 @@
-from torchvision import transforms
 from PIL import Image
 import os
 from torch.utils.data import DataLoader, IterableDataset, Dataset
 from captum.concept._utils.data_iterator import dataset_to_dataloader, CustomIterableDataset
 import glob
+from utils.augmentation import *
 from captum.concept import Concept
-
-class NormalizeImage(object):
-    def __call__(self, img):
-        EPSILON = 1e-10
-        min, max = img.min(), img.max()
-        return (img - min) / (EPSILON + max - min)
 
 class ConceptDataset(Dataset):
     def __init__(self, data_paths, device):
@@ -26,7 +20,7 @@ class ConceptDataset(Dataset):
     def __getitem__(self, idx):
         img_path = self.path_list[idx]
         image = Image.open(img_path)
-        image = transforms.Compose([transforms.ToTensor(), transforms.Resize((500, 500)), NormalizeImage()])(image)
+        image = test_transforms(image)
         return image.to(self.device)
 
 

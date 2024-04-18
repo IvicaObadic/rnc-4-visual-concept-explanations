@@ -37,12 +37,13 @@ layers = ["encoder.encoder.avgpool"]
 def parse_args():
   parser = argparse.ArgumentParser(description="Parses the parameters for the contrastive pretraining and probing of the deep learning models that predict socieconomic outcomes.")
 
+  parser.add_argument("--probing", action='store_true', help="Whether the testing is done on the probed model or on the standard supervised trained model.")
+  parser.add_argument("--timestamp", type=str, help="The timestamp of the model on which the concepts are to be tested.")
+  parser.add_argument("--encoder_checkpoint_path", type=str, help="The name of the model checkpoint relative to the model output dir.")
   parser.add_argument("--dataset_name", type=str, default="household_income", help="Name of the dataset to use for training. Supported names are 'household_income' and 'Liveability'.")
   parser.add_argument("--dataset_root_dir", type=str, default=income_dataset_root_dir, help="Root directory containing the dataset.")
   parser.add_argument("--model_output_root_dir", type=str, default="/home/results/ConceptDiscovery/", help="The root dir where the model checkpoints are stored.'")
-  parser.add_argument("--probing", type=bool, help="Whether the testing is done on the probed model or on the standard supervised model.")
-  parser.add_argument("--timestamp", type=str, help="The timestamp of the model on which the concepts are to be tested.")
-  parser.add_argument("--encoder_weights_path", type=str, default=None, help="The name of the model checkpoint.")
+  parser.add_argument("--encoder_name", default="resnet50", type=str, help="The model encoder.")
   parser.add_argument("--concepts_path", type=str, default="/home/ConceptDiscovery/concepts/TCAV_data/", help="The root folder where the concept examples are located.")
 
   return parser.parse_args()
@@ -115,7 +116,7 @@ def compute_cavs_and_activations(dataset_name, dataset_root_dir, model_output_ro
 
 
     objective = "regression"
-    model_dir = os.path.join(model_output_root_dir, format(dataset_name), "models", objective,
+    model_dir = os.path.join(model_output_root_dir, dataset_name, "models", objective,
                              "encoder_resnet50")
     if probing:
         model_dir = os.path.join(model_dir, "probed")
@@ -124,7 +125,7 @@ def compute_cavs_and_activations(dataset_name, dataset_root_dir, model_output_ro
     model = get_trained_model(model_dir, model_checkpointpath)
 
     #setup the TCAV output directory
-    out_folder = os.path.join(model_dir, "TCAV_output_wo_random/")
+    out_folder = os.path.join(model_dir, "TCAV_output/")
     os.makedirs(out_folder, exist_ok=True)
 
     # Setting up Concepts
@@ -216,5 +217,5 @@ if __name__ == '__main__':
                                  args.model_output_root_dir,
                                  args.probing,
                                  args.timestamp,
-                                 args.encoder_weights_path,
+                                 args.encoder_checkpoint_path,
                                  args.concepts_path)

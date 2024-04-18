@@ -1,6 +1,5 @@
 import torch
 from torchvision.transforms import v2
-from torchvision.transforms import InterpolationMode
 
 resize_size = 500
 image_size = 500
