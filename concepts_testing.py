@@ -13,7 +13,7 @@ from captum.concept import TCAV
 
 from util import *
 from codebase_TCAV.utils_CAVs import assemble_concept, assemble_random_concept
-from codebase_TCAV.Custom_Classifier import StratifiedClassifier
+from codebase_TCAV.Custom_Classifier import StratifiedSVMClassifier
 from sklearn.manifold import TSNE
 
 
@@ -35,18 +35,62 @@ else:
 layers = ["encoder.encoder.avgpool"]
 
 def parse_args():
-  parser = argparse.ArgumentParser(description="Parses the parameters for the contrastive pretraining and probing of the deep learning models that predict socieconomic outcomes.")
+  parser = argparse.ArgumentParser(description="Parses the parameters for the concept testing with the TCAV approach.")
 
   parser.add_argument("--probing", action='store_true', help="Whether the testing is done on the probed model or on the standard supervised trained model.")
   parser.add_argument("--timestamp", type=str, help="The timestamp of the model on which the concepts are to be tested.")
   parser.add_argument("--encoder_checkpoint_path", type=str, help="The name of the model checkpoint relative to the model output dir.")
+  parser.add_argument("--concepts_path", type=str, default="/home/ConceptDiscovery/concepts/TCAV_data/", help="The root folder where the concept examples are located.")
   parser.add_argument("--dataset_name", type=str, default="household_income", help="Name of the dataset to use for training. Supported names are 'household_income' and 'Liveability'.")
   parser.add_argument("--dataset_root_dir", type=str, default=income_dataset_root_dir, help="Root directory containing the dataset.")
   parser.add_argument("--model_output_root_dir", type=str, default="/home/results/ConceptDiscovery/", help="The root dir where the model checkpoints are stored.'")
-  parser.add_argument("--encoder_name", default="resnet50", type=str, help="The model encoder.")
-  parser.add_argument("--concepts_path", type=str, default="/home/ConceptDiscovery/concepts/TCAV_data/", help="The root folder where the concept examples are located.")
 
   return parser.parse_args()
+
+
+def get_concept_experiment_setup(concepts_path, setting="one_vs_all"):
+
+    if setting == "one_vs_all":
+        # Setting up Concepts
+        concepts_bank = ['impervious_surface', 'vegetation_wo10', 'city_dense', 'city_medium', 'city_sparse',
+                         'agriculture', 'original_water']
+
+        experiment_setup = []
+        for idx, concept in enumerate(concepts_bank):
+            all_other_concepts = [other_concept for other_concept in concepts_bank if other_concept != concept]
+            # sklearn classifiers require that the positive class (the concept) has a greater label than the negative.
+            concept_idx = idx + len(concepts_bank)
+            random_concept_idx = idx
+            concept_dataset = assemble_concept(concept, concept_idx, concepts_path, device)
+            num_random_examples = 500
+            random_dataset = assemble_random_concept(all_other_concepts, random_concept_idx, concepts_path, device, num_random_examples)
+            experiment_setup.append([concept_dataset, random_dataset])
+    else:
+        concept_random = assemble_concept(
+            'random_0', 0, concepts_path, device=device)
+        impervious_sufrace_concept = assemble_concept(
+            'impervious_surface', 2, concepts_path, device=device)
+        vegetation_concept = assemble_concept(
+            'vegetation_wo10', 1, concepts_path, device=device)
+        city_dense_concept = assemble_concept(
+            'city_dense', 3, concepts_path, device=device)
+        city_medium_concept = assemble_concept(
+            'city_medium', 4, concepts_path, device=device)
+        city_sparse_concept = assemble_concept(
+            'city_sparse', 5, concepts_path, device=device)
+        agriculture_concept = assemble_concept(
+            'agriculture', 6, concepts_path, device=device)
+        water_concept = assemble_concept(
+            'original_water', 7, concepts_path, device=device)
+
+        experiment_setup = [[vegetation_concept, concept_random],
+                            [impervious_sufrace_concept, concept_random],
+                            [city_dense_concept, concept_random], [city_medium_concept, concept_random],
+                            [city_sparse_concept, concept_random],
+                            [agriculture_concept, concept_random],
+                            [water_concept, concept_random]]
+
+    return experiment_setup
 
 
 def compute_cavs_and_activations(dataset_name, dataset_root_dir, model_output_root_dir, probing, timestamp, model_checkpointpath, concepts_path):
@@ -105,15 +149,13 @@ def compute_cavs_and_activations(dataset_name, dataset_root_dir, model_output_ro
         if store_tsne:
             layer_instance_activations_df = pd.DataFrame(np.array(activations), index=test_ids)
 
-            print("Computing tSNE for the activations and CAVs of layer {}".format(layer))
-            print(layer_instance_activations_df.shape)
+            print("Computing tSNE for the activations and CAVs of layer {}".format(target_layer))
             tsne = TSNE(n_components=2)
             tsne_instance_activations = tsne.fit_transform(layer_instance_activations_df)
             tsne_instance_activations = pd.DataFrame(tsne_instance_activations,columns=["tsne_dim_1", "tsne_dim_2"], index=test_ids)
 
-            print("Saving instance activations for layer {}".format(layer))
+            print("Saving instance activations for layer {}".format(target_layer))
             tsne_instance_activations.to_csv(os.path.join(out_folder, "{}_tsne_instances_cavs.csv".format(target_layer)))
-
 
     objective = "regression"
     model_dir = os.path.join(model_output_root_dir, dataset_name, "models", objective,
@@ -125,18 +167,11 @@ def compute_cavs_and_activations(dataset_name, dataset_root_dir, model_output_ro
     model = get_trained_model(model_dir, model_checkpointpath)
 
     #setup the TCAV output directory
-    out_folder = os.path.join(model_dir, "TCAV_output/")
+    concept_setup = "one_vs_all"
+    out_folder = os.path.join(model_dir, "concept_testing")
     os.makedirs(out_folder, exist_ok=True)
 
-    # Setting up Concepts
-    concepts_bank = ['impervious_surface', 'vegetation_wo10', 'city_dense', 'city_medium', 'city_sparse', 'agriculture', 'original_water']
-
-    experiment_setup = []
-    for concept_idx, concept in enumerate(concepts_bank):
-        all_other_concepts = [other_concept for other_concept in concepts_bank if other_concept != concept]
-        concept_dataset = assemble_concept(concept, concept_idx, concepts_path, device)
-        random_dataset = assemble_random_concept(all_other_concepts, concept_idx + len(concepts_bank), concepts_path, device)
-        experiment_setup.append([concept_dataset, random_dataset])
+    experiment_setup = get_concept_experiment_setup(concepts_path, concept_setup)
 
     # Define Setup
     setup_list = []
@@ -145,16 +180,17 @@ def compute_cavs_and_activations(dataset_name, dataset_root_dir, model_output_ro
         setup_list.append(f'{concept_pair[0].id}-{concept_pair[1].id}')
         concept_names_list.append(f'{concept_pair[0].name}-{concept_pair[1].name}')
 
+    run_time = datetime.datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     # define TCAV Vectors for concepts
     TCAV_0 = TCAV(model=model,
                   layers=layers,
                   layer_attr_method=LayerIntegratedGradients(
                       model, None,
                       multiply_by_inputs=True),
-                  classifier=StratifiedClassifier(epochs=1, device=device, batch_size=400))
+                  classifier=StratifiedSVMClassifier(),
+                  save_path=os.path.join(out_folder, "cav_intermediate_{}".format(run_time)))
 
-    print("Saving CAVs")
-    # compute Classifier and save for accuracies and CAV weights
+    print("Computing CAVs", flush=True)
     cavs_computed = TCAV_0.compute_cavs(experiment_setup, force_train=True)
     cav_weights_per_layer = {}
     cav_accuracy_per_layer = []

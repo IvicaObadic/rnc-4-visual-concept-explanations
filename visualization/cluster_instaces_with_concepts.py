@@ -5,7 +5,7 @@ import matplotlib.ticker as ticker
 import seaborn as sns
 from matplotlib.patches import Rectangle
 from sklearn.preprocessing import normalize
-from visualize_tcav import get_out_folder, concept_name_mapping, CONCEPT_COLOR_MAPPING
+from visualize_tcav import get_out_folder, concept_name_mapping, CONCEPT_COLOR_MAPPING, sorted_concepts
 
 layer = "encoder.encoder.avgpool"
 
@@ -32,6 +32,20 @@ def get_normalized_cosine_sim_per_concept(outfolder, target_layer):
 
     return predictions_cosine_sim
 
+def cluster_concepts_for_single_model(concept_similarities):
+
+    figsize = (1.5, 1.5)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.scatterplot(x='tsne_dim_1', y='tsne_dim_2', hue='concept', palette=CONCEPT_COLOR_MAPPING,
+                         data=concept_similarities, ax=ax, s=5, edgecolor=None)
+    ax.xaxis.set_major_locator(ticker.NullLocator())
+    ax.yaxis.set_major_locator(ticker.NullLocator())
+    ax.get_legend().remove()
+    ax.set(xlabel=None, ylabel=None)
+    ax.set_title("Concepts")
+    fig.tight_layout()
+    plt.savefig(os.path.join(out_folder_income_contrastive, "small_income_clusters.png"), dpi=300)
+    plt.close()
 
 def cluster_concepts_for_contrastive_encoder(income_conpcet_similarities, liveability_concept_similarities):
     fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(6, 2.5))
@@ -54,23 +68,25 @@ def cluster_concepts_for_contrastive_encoder(income_conpcet_similarities, liveab
     ax_liveability_contrastive.set(xlabel=None, ylabel=None)
     ax_liveability_contrastive.set_title("Liveability")
 
-    lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
-    # remove the legends from the individual axis
+    lines, labels = [], []
     for ax in fig.axes:
+        legend_lines, legend_labels = ax.get_legend_handles_labels()
+        lines.extend(legend_lines)
+        labels.extend(legend_labels)
         ax.get_legend().remove()
 
     # Combine lines and labels from all subplots, removing duplicates
-    lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
     unique_labels, lines_for_plot = [], []
     for line, label in zip(lines, labels):
         if label not in unique_labels:
+            print(label, line.get_color())
             unique_labels.append(label)
             lines_for_plot.append(
                 Rectangle((0, 0), 0.5, 0.5, color=line.get_color(), label=label))  # Create square legend symbols
 
-    sorted_legend_items = ["water", "vegetation", "agriculture", "sparse res.", "medium res.", "dense res.",
-                           "impervious"]
-    sorted_lines_for_plot = [lines_for_plot[unique_labels.index(label)] for label in sorted_legend_items if label in unique_labels]
+
+    sorted_legend_items = [label for label in sorted_concepts if label in unique_labels]
+    sorted_lines_for_plot = [lines_for_plot[unique_labels.index(label)] for label in sorted_legend_items]
 
     # Create the legend entirely outside the plot with one column
     legend = fig.legend(sorted_lines_for_plot, sorted_legend_items, loc='upper left', title="Concept",
@@ -80,9 +96,9 @@ def cluster_concepts_for_contrastive_encoder(income_conpcet_similarities, liveab
     fig.tight_layout()
     plt.savefig(os.path.join(out_folder_income_contrastive, "", "contrastive_instance_cluster_allignment.png"), bbox_inches='tight',
                 dpi=300)
+    plt.close()
 
 if __name__ == '__main__':
-
 
     out_folder_income_baseline, model_type = get_out_folder("household_income", False)
     out_folder_income_contrastive, model_type = get_out_folder("household_income", True)
@@ -96,6 +112,7 @@ if __name__ == '__main__':
     liveability_contrastive_results = get_normalized_cosine_sim_per_concept(out_folder_liveability_contrastive, layer)
     liveability_baseline_results = get_normalized_cosine_sim_per_concept(out_folder_liveability_baseline, layer)
 
+    cluster_concepts_for_single_model(hi_contrastive_results)
     cluster_concepts_for_contrastive_encoder(hi_contrastive_results, liveability_contrastive_results)
 
     fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(6, 3.5))
@@ -145,7 +162,7 @@ if __name__ == '__main__':
             lines_for_plot.append(
                 Rectangle((0, 0), 0.5, 0.5, color=line.get_color(), label=label))  # Create square legend symbols
 
-    sorted_legend_items = ["water", "vegetation", "agriculture", "sparse res.", "medium res.", "dense res.", "impervious"]
+    sorted_legend_items = [label for label in sorted_concepts if label in unique_labels]
     sorted_lines_for_plot = [lines_for_plot[unique_labels.index(label)] for label in sorted_legend_items]
 
     # Create the legend entirely outside the plot with one column

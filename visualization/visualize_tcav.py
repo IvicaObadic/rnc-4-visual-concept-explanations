@@ -9,7 +9,6 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import seaborn as sns
 
-#layers = ["encoder.encoder.layer1.2", "encoder.encoder.layer2.3", "encoder.encoder.layer4.2", "encoder.encoder.avgpool"]
 layers = ["encoder.encoder.avgpool"]
 
 concept_name_mapping = {"vegetation_wo10": "vegetation", "impervious_surface": "impervious",
@@ -29,20 +28,23 @@ CONCEPT_COLOR_MAPPING = {"vegetation":"g",
                          "dense res.":"coral",
                          'impervious': "gray"}
 
+sorted_concepts = ["water", "vegetation", "agriculture", "sparse res.", "medium res.", "dense res.", "impervious"]
+
 
 def get_out_folder(dataset_name, probing):
     objective = "regression"
     if dataset_name == "household_income":
         if probing:
             model_type = "contrastive pretrained model"
-            timestamp = "2024-04-18_08.33.23"
+            timestamp = "2024-02-28_08.55.11"
         else:
             model_type = "regression model"
-            timestamp = "2024-04-16_14.27.25"
+            timestamp = "2024-02-26_17.51.13"
     else:
         if probing:
             model_type = "contrastive pretrained model"
             timestamp = "2024-02-29_09.08.17"
+
         else:
             model_type = "regression model"
             timestamp = "2024-02-24_19.13.35"
@@ -52,7 +54,7 @@ def get_out_folder(dataset_name, probing):
     if probing:
         tcav_results_folder = os.path.join(tcav_results_folder, "probed")
 
-    tcav_results_folder = os.path.join(tcav_results_folder, timestamp, "TCAV_output")
+    tcav_results_folder = os.path.join(tcav_results_folder, timestamp, "concept_testing")
     return tcav_results_folder, model_type
 
 def get_tcav_scores_with_tsne_activations(results_folder):
@@ -74,10 +76,10 @@ def normalize_TCAV_value(concept_data):
 
 def visualize_tcav_scores_with_tsne_activations():
 
-    tcav_scores_income_probed = get_tcav_scores_with_tsne_activations(out_folder_income_probed)
-    tcav_scores_liveability_probed = get_tcav_scores_with_tsne_activations(out_folder_liveability_probed)
+    tcav_scores_income_probed = get_tcav_scores_with_tsne_activations(out_folder_income_contrastive)
+    tcav_scores_liveability_probed = get_tcav_scores_with_tsne_activations(out_folder_liveability_contrastive)
 
-    visualization_out_dir = os.path.join(out_folder_income_probed, "visualization")
+    visualization_out_dir = os.path.join(out_folder_income_contrastive, "visualization")
     os.makedirs(visualization_out_dir, exist_ok=True)
 
     for concept in tcav_scores_liveability_probed["concept"].unique():
@@ -139,14 +141,14 @@ def get_cavs_activations(out_folder, layer, encoder="L1 loss"):
 
     return cav_layer_accuracy
 
-def get_concept_layer_accuracy(baseline_model_folder, finetuned_model_folder):
-    visualization_out_dir_probed = os.path.join(finetuned_model_folder, "")
+def get_concept_layer_accuracy(dataset_name, baseline_model_folder, contrastive_model_folder):
+    visualization_out_dir_probed = os.path.join(contrastive_model_folder, "")
     os.makedirs(visualization_out_dir_probed, exist_ok=True)
 
     concept_layer_accuracies_baseline = pd.read_csv(os.path.join(baseline_model_folder, "cav_accuracy.csv"))
     concept_layer_accuracies_baseline["objective"] = "L1 loss"
 
-    concept_layer_accuracies_probed = pd.read_csv(os.path.join(finetuned_model_folder, "cav_accuracy.csv"))
+    concept_layer_accuracies_probed = pd.read_csv(os.path.join(contrastive_model_folder, "cav_accuracy.csv"))
     concept_layer_accuracies_probed["objective"] = "Rank-N-Contrast"
 
     concept_accuracy = pd.concat([concept_layer_accuracies_baseline, concept_layer_accuracies_probed], axis=0)
@@ -154,11 +156,12 @@ def get_concept_layer_accuracy(baseline_model_folder, finetuned_model_folder):
     concept_accuracy["concept"].replace(concept_name_mapping, inplace=True)
 
     fig, axs = plt.subplots(figsize=(4.5, 4.5))
-    axs.set_title("{}".format(dataset_title))
+    axs.set_title("{}".format(dataset_name))
     axs.set_ylim(bottom=0, top=1.01)
-    sns.barplot(data=concept_accuracy, x="concept", y="accuracy", hue="objective", ax=axs)
+    sns.barplot(data=concept_accuracy, x="concept", y="accuracy", hue="objective", ax=axs, order=sorted_concepts)
     axs.set_xticklabels(axs.get_xticklabels(), rotation=45, ha='right')
     axs.set_ylabel("SVM concept accuracy")
+    plt.legend(loc='center right', title="Encoder")
     fig.tight_layout()
     plt.savefig(os.path.join(visualization_out_dir_probed, "{}_concept_layer_accuracy.pdf".format(dataset_name)),
                 dpi=300)
@@ -167,14 +170,17 @@ def get_concept_layer_accuracy(baseline_model_folder, finetuned_model_folder):
 
 if __name__ == '__main__':
 
-    dataset_name = "household_income"
-    dataset_title = "Liveability" if dataset_name == "Liveability" else "Income"
-    out_folder_income_probed, _ = get_out_folder("household_income", True)
+    out_folder_income_baseline, _ = get_out_folder("household_income", False)
+    out_folder_income_contrastive, _ = get_out_folder("household_income", True)
 
-    out_folder_liveability_probed, _ = get_out_folder("Liveability", True)
+    out_folder_liveability_baseline, _ = get_out_folder("Liveability", False)
+    out_folder_liveability_contrastive, _ = get_out_folder("Liveability", True)
 
     for layer in layers:
         visualize_tcav_scores_with_tsne_activations()
+
+    get_concept_layer_accuracy("Income", out_folder_income_baseline, out_folder_income_contrastive)
+    get_concept_layer_accuracy("Liveability", out_folder_liveability_baseline, out_folder_liveability_contrastive)
 
 
 
