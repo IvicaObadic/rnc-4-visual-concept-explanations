@@ -68,11 +68,28 @@ def get_tcav_scores_with_tsne_activations(results_folder):
 
     return activations_tcav_scores
 
-def normalize_TCAV_value(concept_data):
+def min_max_norm(concept_data):
     max_concept_value = concept_data["TCAV_value"].max()
     min_concept_value = concept_data["TCAV_value"].min()
-    concept_data["TCAV_value"] = 2 * ((concept_data.TCAV_value - min_concept_value) / (max_concept_value - min_concept_value)) - 1
+    concept_data["TCAV_value"] = (concept_data.TCAV_value - min_concept_value) / (max_concept_value - min_concept_value)
     return concept_data
+
+def normalize_TCAV_value(concept_data):
+    normalized_concept_data = []
+    pos_concept_sensitivity = concept_data.loc[concept_data["TCAV_value"] >= 0]
+    negative_concept_sensitivity = concept_data.loc[concept_data["TCAV_value"] < 0]
+
+    if len(pos_concept_sensitivity.index) > 0:
+        pos_concept_sensitivity = min_max_norm(pos_concept_sensitivity)
+        normalized_concept_data.append(pos_concept_sensitivity)
+    if len(negative_concept_sensitivity.index) > 0:
+        negative_concept_sensitivity = min_max_norm(negative_concept_sensitivity)
+        # the negative concept values are normalized from 0 to -1
+        negative_concept_sensitivity["TCAV_value"] = negative_concept_sensitivity['TCAV_value'].apply(lambda x: -1 + x)
+        normalized_concept_data.append(negative_concept_sensitivity)
+
+    normalized_concept_data = pd.concat(normalized_concept_data)
+    return normalized_concept_data
 
 def visualize_tcav_scores_with_tsne_activations():
 
@@ -93,31 +110,29 @@ def visualize_tcav_scores_with_tsne_activations():
         fig, axs = plt.subplots(nrows=1, ncols=2,figsize=(6, 2.0))
         divider = make_axes_locatable(axs[1])  # Create a divider for colorbar placement
         cax = divider.append_axes('right', size='3%', pad=0.05)  # Add axes for colorbar
+        norm = plt.Normalize(-1, 1)
 
         plt.subplots_adjust(right=0.8)  # Adjust margins for spacing
 
-        ax_income = sns.scatterplot(x='tsne_dim_1', y='tsne_dim_2', hue='TCAV_value', palette="plasma",
+        ax_income = sns.scatterplot(x='tsne_dim_1', y='tsne_dim_2', hue='TCAV_value',  hue_norm=norm, palette="plasma",
                                     data=income_concept_data, s=5, ax=axs[0])
-        norm = plt.Normalize(income_concept_data['TCAV_value'].min(), income_concept_data['TCAV_value'].max())
-        sm = plt.cm.ScalarMappable(cmap="plasma", norm=norm)
-        sm.set_array([])
+
         ax_income.xaxis.set_major_locator(ticker.NullLocator())
         ax_income.yaxis.set_major_locator(ticker.NullLocator())
         ax_income.set(xlabel=None, ylabel=None)
         ax_income.get_legend().remove()
         ax_income.set_title("Income")
 
-        ax_liveability = sns.scatterplot(x='tsne_dim_1', y='tsne_dim_2', hue='TCAV_value', palette="plasma",
+        ax_liveability = sns.scatterplot(x='tsne_dim_1', y='tsne_dim_2', hue='TCAV_value', hue_norm=norm, palette="plasma",
                                          data=liveability_concept_data, s=5, ax=axs[1])
-        norm = plt.Normalize(liveability_concept_data['TCAV_value'].min(), liveability_concept_data['TCAV_value'].max())
-        sm = plt.cm.ScalarMappable(cmap="plasma", norm=norm)
-        sm.set_array([])
         ax_liveability.xaxis.set_major_locator(ticker.NullLocator())
         ax_liveability.yaxis.set_major_locator(ticker.NullLocator())
         ax_liveability.set(xlabel=None, ylabel=None)
         ax_liveability.get_legend().remove()
         ax_liveability.set_title("Liveability")
         label = "Conceptual sensitivity"
+        sm = plt.cm.ScalarMappable(cmap="plasma", norm=norm)
+        sm.set_array([])
         colorbar = fig.colorbar(sm, cax=cax, orientation='vertical')
         colorbar.set_label(label)
         colorbar.ax.set_ylabel(label, rotation=270, labelpad=15, fontsize=10)
@@ -163,7 +178,7 @@ def get_concept_layer_accuracy(dataset_name, baseline_model_folder, contrastive_
     axs.set_ylabel("SVM concept accuracy")
     plt.legend(loc='center right', title="Encoder")
     fig.tight_layout()
-    plt.savefig(os.path.join(visualization_out_dir_probed, "{}_concept_layer_accuracy.pdf".format(dataset_name)),
+    plt.savefig(os.path.join(visualization_out_dir_probed, "{}_concept_layer_accuracy.png".format(dataset_name)),
                 dpi=300)
     plt.close()
 

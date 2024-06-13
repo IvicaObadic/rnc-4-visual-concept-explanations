@@ -6,7 +6,7 @@ The proposed pipeline enables intuitive visual explanations of the deep learning
 ![Proposed workflow](method_workflow.png)
 
 ## Implementation ##
-The implementation of the deep learning model relies on PyTorch, PyTorch ligthning and wandb. For the TCAV method, we used the implementation provided by the Captum library. It is reccomended to perform all these steps on GPU. 
+The implementation of the deep learning model relies on PyTorch, PyTorch ligthning and wandb. For the TCAV method, we used the implementation provided by the Captum library. It is reccomended to execute the code on GPU. 
 
 ### Datasets ###
 We evaluate the proposed pipeline on the tasks of estimating the household income dataset in Paris and the liveability city patches in the Netherlands.
@@ -19,7 +19,7 @@ Once the datasets are downloaded, the following steps need to be implemented:
 2. **Linear probing**: `python train_socioeconomic_model.py `<br>` --training_objective "regression" `<br>` --encoder_checkpoint_path <the relative path under the model directory of the contrastive pretrained checkpoint>`
 3. **Concepts testing** (computes the t-SNE activations and TCAV): `python concepts_testing.py`
 
-The description of the arguments that these scripts accept can be found in the python files. The default hyperparameters for the model training can be found in the /setup/training_params.yaml file and the scripts for visualization of the results can be found in the **visualization** directory.
+The description of the arguments that these scripts accept can be found in the corresponding python files. The default hyperparameters for the model training can be found in the /setup/training_params.yaml file and the scripts for visualization of the results can be found in the **visualization** directory.
 The model checkpoints are available under the **model_checkpoints** directory.
 
 
